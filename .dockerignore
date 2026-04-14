@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.git/
+.venv/
+venv/
+.idea/
+.cursor/
+terminals/
+agent-transcripts/
+*.ipynb

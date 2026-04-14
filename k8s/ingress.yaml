@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: scan-visualizer
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: scan-visualizer.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: scan-visualizer
+                port:
+                  number: 80

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scan-visualizer
+  labels:
+    app: scan-visualizer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scan-visualizer
+  template:
+    metadata:
+      labels:
+        app: scan-visualizer
+    spec:
+      containers:
+        - name: scan-visualizer
+          image: cr.yandex/<registry-id>/scan-visualizer:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8501
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 30
+            periodSeconds: 20
