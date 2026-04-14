@@ -33,9 +33,9 @@ kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-Before deploy, set your image in `k8s/deployment.yaml`:
+Image in `k8s/deployment.yaml`:
 
-- `cr.yandex/<registry-id>/scan-visualizer:latest`
+- `ghcr.io/vova9299-pixel/scan-visualizer:latest`
 
 and host in `k8s/ingress.yaml`:
 

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: scan-visualizer
-          image: cr.yandex/<registry-id>/scan-visualizer:latest
+          image: ghcr.io/vova9299-pixel/scan-visualizer:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8501

@@ -1,20 +1,18 @@
 # Deploy to Yandex Cloud Kubernetes
 
-1. Build image:
+1. Build and publish image to GHCR (automatic):
 
 ```bash
-docker build -t cr.yandex/<registry-id>/scan-visualizer:latest .
+git push origin master
 ```
 
-2. Push image:
+The workflow publishes:
 
-```bash
-docker push cr.yandex/<registry-id>/scan-visualizer:latest
-```
+- `ghcr.io/vova9299-pixel/scan-visualizer:latest`
 
-3. Update image path in `k8s/deployment.yaml`.
+2. Ensure image path in `k8s/deployment.yaml` is correct.
 
-4. Deploy manifests:
+3. Deploy manifests:
 
 ```bash
 kubectl apply -f k8s/deployment.yaml
@@ -22,7 +20,7 @@ kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-5. Check rollout:
+4. Check rollout:
 
 ```bash
 kubectl rollout status deploy/scan-visualizer
