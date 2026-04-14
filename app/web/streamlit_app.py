@@ -460,11 +460,15 @@ if result is not None:
         "2D debug view",
         "Покадровый просмотр контуров и промежуточной визуализации.",
     )
-    frame_idx = st.slider(
-        "Кадр",
-        min_value=0,
-        max_value=max(0, len(result.debug_data["angles"]) - 1),
-        value=0,
-        step=1,
-    )
+    frame_count = len(result.debug_data["angles"])
+    if frame_count > 1:
+        frame_idx = st.slider(
+            "Кадр",
+            min_value=0,
+            max_value=frame_count - 1,
+            value=0,
+            step=1,
+        )
+    else:
+        frame_idx = 0
     _show_debug_frame(result, frame_idx)
