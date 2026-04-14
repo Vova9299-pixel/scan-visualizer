@@ -53,8 +53,6 @@ def _inject_styles() -> None:
             }
 
             .hero-card,
-            .upload-card,
-            .content-card,
             .object-card {
                 background: #ffffff;
                 border: 1px solid rgba(20, 32, 51, 0.08);
@@ -115,39 +113,6 @@ def _inject_styles() -> None:
                 max-width: 700px;
                 font-size: 1rem;
                 line-height: 1.6;
-            }
-
-            .hero-note {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 0.8rem;
-                margin-top: 1.25rem;
-            }
-
-            .hero-pill {
-                background: rgba(255, 255, 255, 0.85);
-                border: 1px solid rgba(20, 32, 51, 0.07);
-                border-radius: 18px;
-                padding: 0.85rem 1rem;
-                text-align: center;
-                font-size: 0.92rem;
-                color: #3d4b61;
-            }
-
-            .upload-card,
-            .content-card {
-                border-radius: 24px;
-                padding: 1.3rem;
-                margin-bottom: 1rem;
-            }
-
-            .section-kicker {
-                font-size: 0.78rem;
-                text-transform: uppercase;
-                letter-spacing: 0.12em;
-                color: #61708a;
-                font-weight: 800;
-                margin-bottom: 0.35rem;
             }
 
             .section-title {
@@ -251,10 +216,6 @@ def _inject_styles() -> None:
                     margin-bottom: 1rem;
                 }
 
-                .hero-note {
-                    grid-template-columns: 1fr;
-                }
-
                 .section-title {
                     font-size: 1.2rem;
                 }
@@ -269,8 +230,6 @@ def _inject_styles() -> None:
                     flex: 1 1 100% !important;
                 }
 
-                .upload-card,
-                .content-card,
                 .object-card {
                     padding: 1rem;
                     border-radius: 14px;
@@ -392,11 +351,6 @@ def _render_hero() -> None:
                 Загрузите серию снимков, запустите расчёт и получите аккуратную
                 2D/3D визуализацию, объём и плотность в одном чистом веб-интерфейсе.
             </div>
-            <div class="hero-note">
-                <div class="hero-pill">3D модель и срезы в одном рабочем окне</div>
-                <div class="hero-pill">Поддержка загрузки отдельных изображений и ZIP</div>
-                <div class="hero-pill">Оптимизировано для десктопа и смартфона</div>
-            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -406,7 +360,6 @@ def _render_hero() -> None:
 def _render_section(title: str, subtitle: str) -> None:
     st.markdown(
         f"""
-        <div class="section-kicker">Dashboard</div>
         <div class="section-title">{title}</div>
         <div class="section-subtitle">{subtitle}</div>
         """,
@@ -443,7 +396,6 @@ _inject_styles()
 _render_hero()
 
 with st.container():
-    st.markdown('<div class="upload-card">', unsafe_allow_html=True)
     _render_section(
         "Input data",
         "Загрузите снимки в поддерживаемом формате и запустите расчёт одним нажатием.",
@@ -455,7 +407,6 @@ with st.container():
     )
     uploaded_zip = st.file_uploader("Или ZIP-архив с изображениями", type=["zip"])
     run_clicked = st.button("Запустить обработку", type="primary", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 if run_clicked:
     with tempfile.TemporaryDirectory(prefix="scan_web_") as tmp_dir:
@@ -484,7 +435,6 @@ if run_clicked:
 result = st.session_state.get("process_result")
 
 if result is not None:
-    st.markdown('<div class="content-card">', unsafe_allow_html=True)
     _render_section(
         "Summary metrics",
         "Ключевые показатели по текущему набору снимков.",
@@ -493,25 +443,19 @@ if result is not None:
     metric_a.metric("Суммарный объем (мм3)", f"{result.total_volume_mm3:.3f}")
     metric_b.metric("Суммарный объем (мл)", f"{result.total_volume_ml:.4f}")
     metric_c.metric("Средняя плотность (%)", f"{result.average_density_percent:.2f}")
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div class="content-card">', unsafe_allow_html=True)
     _render_section(
         "Detected objects",
         "Список выделенных объектов с их рассчитанным объёмом.",
     )
     _render_object_cards(result)
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div class="content-card">', unsafe_allow_html=True)
     _render_section(
         "3D visualization",
         "Интерактивная модель для визуальной оценки формы и структуры.",
     )
     st.plotly_chart(_build_3d_figure(result), use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div class="content-card">', unsafe_allow_html=True)
     _render_section(
         "2D debug view",
         "Покадровый просмотр контуров и промежуточной визуализации.",
@@ -524,4 +468,3 @@ if result is not None:
         step=1,
     )
     _show_debug_frame(result, frame_idx)
-    st.markdown("</div>", unsafe_allow_html=True)
