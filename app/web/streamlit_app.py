@@ -397,7 +397,7 @@ _render_hero()
 
 with st.container():
     _render_section(
-        "Input data",
+        "Исходные данные",
         "Загрузите снимки в поддерживаемом формате и запустите расчёт одним нажатием.",
     )
     uploaded_files = st.file_uploader(
@@ -436,7 +436,7 @@ result = st.session_state.get("process_result")
 
 if result is not None:
     _render_section(
-        "Summary metrics",
+        "Итоговые метрики",
         "Ключевые показатели по текущему набору снимков.",
     )
     metric_a, metric_b, metric_c = st.columns(3)
@@ -445,19 +445,19 @@ if result is not None:
     metric_c.metric("Средняя плотность (%)", f"{result.average_density_percent:.2f}")
 
     _render_section(
-        "Detected objects",
+        "Найденные объекты",
         "Список выделенных объектов с их рассчитанным объёмом.",
     )
     _render_object_cards(result)
 
     _render_section(
-        "3D visualization",
+        "3D-визуализация",
         "Интерактивная модель для визуальной оценки формы и структуры.",
     )
     st.plotly_chart(_build_3d_figure(result), use_container_width=True)
 
     _render_section(
-        "2D debug view",
+        "2D-отладочный просмотр",
         "Покадровый просмотр контуров и промежуточной визуализации.",
     )
     frame_count = len(result.debug_data["angles"])
