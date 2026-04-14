@@ -26,54 +26,206 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+
             .stApp {
-                background: #f6f7fb;
+                background:
+                    radial-gradient(circle at top left, rgba(159, 170, 255, 0.18), transparent 28%),
+                    radial-gradient(circle at top right, rgba(117, 201, 255, 0.18), transparent 24%),
+                    linear-gradient(180deg, #f8f8fc 0%, #f3f5f9 100%);
+                color: #162033;
             }
 
             .block-container {
-                max-width: 920px;
+                max-width: 1040px;
                 margin: 0 auto;
-                padding-top: 2rem;
-                padding-bottom: 2rem;
+                padding-top: 1.5rem;
+                padding-bottom: 2.5rem;
+            }
+
+            html, body, [class*="css"] {
+                font-family: "Manrope", sans-serif;
             }
 
             h1, h2, h3 {
-                text-align: center;
+                color: #142033;
+                letter-spacing: -0.03em;
             }
 
-            .app-subtitle {
-                text-align: center;
-                color: #4a5568;
-                margin: 0 auto 1.5rem auto;
-                max-width: 680px;
-            }
-
-            .upload-card {
+            .hero-card,
+            .upload-card,
+            .content-card,
+            .object-card {
                 background: #ffffff;
-                border: 1px solid #e5e7eb;
+                border: 1px solid rgba(20, 32, 51, 0.08);
+                box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+            }
+
+            .hero-card {
+                position: relative;
+                overflow: hidden;
+                border-radius: 28px;
+                padding: 2rem 1.5rem 1.6rem 1.5rem;
+                margin-bottom: 1.25rem;
+                background:
+                    linear-gradient(135deg, rgba(250, 251, 255, 0.96), rgba(255, 255, 255, 0.88)),
+                    radial-gradient(circle at 20% 10%, rgba(100, 127, 255, 0.16), transparent 26%);
+            }
+
+            .hero-card::after {
+                content: "";
+                position: absolute;
+                inset: auto -10% -35% auto;
+                width: 220px;
+                height: 220px;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 65%);
+                pointer-events: none;
+            }
+
+            .eyebrow {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                padding: 0.45rem 0.8rem;
+                border-radius: 999px;
+                background: rgba(99, 102, 241, 0.08);
+                color: #4453b3;
+                font-size: 0.8rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                margin-bottom: 1rem;
+            }
+
+            .hero-title {
+                font-family: "Fraunces", serif;
+                font-size: 2.8rem;
+                line-height: 1.05;
+                color: #101828;
+                text-align: center;
+                max-width: 760px;
+                margin: 0 auto 0.9rem auto;
+            }
+
+            .hero-subtitle {
+                text-align: center;
+                color: #526076;
+                margin: 0 auto 1.25rem auto;
+                max-width: 700px;
+                font-size: 1rem;
+                line-height: 1.6;
+            }
+
+            .hero-note {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0.8rem;
+                margin-top: 1.25rem;
+            }
+
+            .hero-pill {
+                background: rgba(255, 255, 255, 0.85);
+                border: 1px solid rgba(20, 32, 51, 0.07);
                 border-radius: 18px;
-                padding: 1.25rem;
-                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+                padding: 0.85rem 1rem;
+                text-align: center;
+                font-size: 0.92rem;
+                color: #3d4b61;
+            }
+
+            .upload-card,
+            .content-card {
+                border-radius: 24px;
+                padding: 1.3rem;
+                margin-bottom: 1rem;
+            }
+
+            .section-kicker {
+                font-size: 0.78rem;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+                color: #61708a;
+                font-weight: 800;
+                margin-bottom: 0.35rem;
+            }
+
+            .section-title {
+                font-size: 1.45rem;
+                font-weight: 800;
+                color: #132033;
+                margin: 0 0 0.3rem 0;
+            }
+
+            .section-subtitle {
+                color: #64748b;
                 margin-bottom: 1rem;
             }
 
             .stButton > button {
                 width: 100%;
-                border-radius: 12px;
-                min-height: 3rem;
-                font-weight: 600;
+                border-radius: 14px;
+                min-height: 3.15rem;
+                font-weight: 800;
+                background: linear-gradient(135deg, #1f3b8f, #4064d8);
+                border: 0;
+                box-shadow: 0 16px 32px rgba(64, 100, 216, 0.28);
             }
 
             [data-testid="stFileUploader"] {
                 width: 100%;
             }
 
+            [data-testid="stFileUploaderDropzone"] {
+                border-radius: 18px;
+                border: 1px dashed rgba(31, 59, 143, 0.22);
+                background: linear-gradient(180deg, rgba(244, 247, 255, 0.9), rgba(255, 255, 255, 0.95));
+            }
+
             [data-testid="stMetric"] {
                 background: #ffffff;
-                border: 1px solid #e5e7eb;
-                border-radius: 16px;
-                padding: 0.75rem;
-                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+                border: 1px solid rgba(20, 32, 51, 0.08);
+                border-radius: 22px;
+                padding: 0.9rem;
+                box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+            }
+
+            [data-testid="stMetricLabel"] {
+                color: #69788f;
+                font-weight: 700;
+            }
+
+            [data-testid="stMetricValue"] {
+                color: #122038;
+            }
+
+            .object-card {
+                border-radius: 22px;
+                padding: 1rem 1.05rem;
+                margin-bottom: 0.85rem;
+            }
+
+            .object-title {
+                font-size: 1.02rem;
+                font-weight: 800;
+                color: #142033;
+                margin-bottom: 0.35rem;
+            }
+
+            .object-meta {
+                color: #5e6e86;
+                line-height: 1.65;
+                font-size: 0.94rem;
+            }
+
+            .stSlider {
+                padding-top: 0.35rem;
+            }
+
+            [data-testid="stPlotlyChart"],
+            [data-testid="stImage"] {
+                border-radius: 22px;
+                overflow: hidden;
             }
 
             @media (max-width: 768px) {
@@ -84,18 +236,27 @@ def _inject_styles() -> None:
                     padding-bottom: 1.25rem;
                 }
 
-                h1 {
-                    font-size: 1.7rem;
-                    line-height: 1.25;
+                .hero-card {
+                    padding: 1.25rem 1rem 1rem 1rem;
+                    border-radius: 22px;
                 }
 
-                h2 {
-                    font-size: 1.2rem;
+                .hero-title {
+                    font-size: 1.95rem;
+                    line-height: 1.12;
                 }
 
-                .app-subtitle {
+                .hero-subtitle {
                     font-size: 0.95rem;
                     margin-bottom: 1rem;
+                }
+
+                .hero-note {
+                    grid-template-columns: 1fr;
+                }
+
+                .section-title {
+                    font-size: 1.2rem;
                 }
 
                 [data-testid="stHorizontalBlock"] {
@@ -108,7 +269,9 @@ def _inject_styles() -> None:
                     flex: 1 1 100% !important;
                 }
 
-                .upload-card {
+                .upload-card,
+                .content-card,
+                .object-card {
                     padding: 1rem;
                     border-radius: 14px;
                 }
@@ -149,8 +312,10 @@ def _extract_uploaded_zip(uploaded_zip: io.BytesIO, target_dir: Path) -> int:
 
 def _build_3d_figure(process_result) -> go.Figure:
     fig = go.Figure()
+    palette = ["#7c8cff", "#35c4b5", "#ff8f6b", "#9f7aea", "#56b6f7", "#f6c453"]
 
-    for obj in process_result.objects:
+    for obj_idx, obj in enumerate(process_result.objects):
+        line_color = palette[obj_idx % len(palette)]
         for points_raw, angle in zip(obj.viz_contours, obj.viz_angles):
             angle_rad = np.deg2rad(angle)
             x_3d = points_raw[:, 0] * np.cos(angle_rad)
@@ -163,18 +328,24 @@ def _build_3d_figure(process_result) -> go.Figure:
                     y=y_3d,
                     z=z_3d,
                     mode="lines",
-                    line={"width": 2},
+                    line={"width": 3, "color": line_color},
                     name=f"Object {obj.object_id}",
                     showlegend=False,
                 )
             )
 
     fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         scene={
             "xaxis_title": "X",
             "yaxis_title": "Y",
             "zaxis_title": "Z",
             "aspectmode": "data",
+            "bgcolor": "#0f172a",
+            "xaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
+            "yaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
+            "zaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
         },
         margin={"l": 0, "r": 0, "t": 30, "b": 0},
     )
@@ -209,22 +380,74 @@ def _show_debug_frame(process_result, frame_index: int) -> None:
     st.image(rendered_rgb, use_container_width=True)
 
 
+def _render_hero() -> None:
+    st.markdown(
+        f"""
+        <div class="hero-card">
+            <div style="text-align:center;">
+                <span class="eyebrow">Medical imaging analysis</span>
+            </div>
+            <div class="hero-title">{APP_TITLE}</div>
+            <div class="hero-subtitle">
+                Загрузите серию снимков, запустите расчёт и получите аккуратную
+                2D/3D визуализацию, объём и плотность в одном чистом веб-интерфейсе.
+            </div>
+            <div class="hero-note">
+                <div class="hero-pill">3D модель и срезы в одном рабочем окне</div>
+                <div class="hero-pill">Поддержка загрузки отдельных изображений и ZIP</div>
+                <div class="hero-pill">Оптимизировано для десктопа и смартфона</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_section(title: str, subtitle: str) -> None:
+    st.markdown(
+        f"""
+        <div class="section-kicker">Dashboard</div>
+        <div class="section-title">{title}</div>
+        <div class="section-subtitle">{subtitle}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_object_cards(process_result) -> None:
+    if not process_result.objects:
+        st.warning("Объекты не найдены.")
+        return
+
+    left_col, right_col = st.columns(2)
+    for idx, obj in enumerate(process_result.objects):
+        target_col = left_col if idx % 2 == 0 else right_col
+        with target_col:
+            st.markdown(
+                f"""
+                <div class="object-card">
+                    <div class="object-title">Object {obj.object_id}</div>
+                    <div class="object-meta">
+                        Объём: <strong>{obj.volume_mm3:.3f} мм3</strong><br/>
+                        Объём: <strong>{obj.volume_ml:.4f} мл</strong><br/>
+                        Срезов в модели: <strong>{len(obj.final_contours)}</strong>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
 st.set_page_config(page_title=APP_TITLE, layout="centered")
 _inject_styles()
-
-st.title(APP_TITLE)
-st.markdown(
-    """
-    <p class="app-subtitle">
-        Загрузите набор снимков отдельными файлами или ZIP-архивом,
-        затем запустите обработку и просмотрите 2D/3D результаты прямо в браузере.
-    </p>
-    """,
-    unsafe_allow_html=True,
-)
+_render_hero()
 
 with st.container():
     st.markdown('<div class="upload-card">', unsafe_allow_html=True)
+    _render_section(
+        "Input data",
+        "Загрузите снимки в поддерживаемом формате и запустите расчёт одним нажатием.",
+    )
     uploaded_files = st.file_uploader(
         "Изображения (PNG/JPG/BMP)",
         type=["png", "jpg", "jpeg", "bmp"],
@@ -261,26 +484,38 @@ if run_clicked:
 result = st.session_state.get("process_result")
 
 if result is not None:
-    st.subheader("Итоговые метрики")
+    st.markdown('<div class="content-card">', unsafe_allow_html=True)
+    _render_section(
+        "Summary metrics",
+        "Ключевые показатели по текущему набору снимков.",
+    )
     metric_a, metric_b, metric_c = st.columns(3)
     metric_a.metric("Суммарный объем (мм3)", f"{result.total_volume_mm3:.3f}")
     metric_b.metric("Суммарный объем (мл)", f"{result.total_volume_ml:.4f}")
     metric_c.metric("Средняя плотность (%)", f"{result.average_density_percent:.2f}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("Объекты")
-    if result.objects:
-        for obj in result.objects:
-            st.write(
-                f"Object {obj.object_id}: {obj.volume_mm3:.3f} мм3 "
-                f"({obj.volume_ml:.4f} мл), срезов: {len(obj.final_contours)}"
-            )
-    else:
-        st.warning("Объекты не найдены.")
+    st.markdown('<div class="content-card">', unsafe_allow_html=True)
+    _render_section(
+        "Detected objects",
+        "Список выделенных объектов с их рассчитанным объёмом.",
+    )
+    _render_object_cards(result)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("3D визуализация")
+    st.markdown('<div class="content-card">', unsafe_allow_html=True)
+    _render_section(
+        "3D visualization",
+        "Интерактивная модель для визуальной оценки формы и структуры.",
+    )
     st.plotly_chart(_build_3d_figure(result), use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("2D отладочный просмотр")
+    st.markdown('<div class="content-card">', unsafe_allow_html=True)
+    _render_section(
+        "2D debug view",
+        "Покадровый просмотр контуров и промежуточной визуализации.",
+    )
     frame_idx = st.slider(
         "Кадр",
         min_value=0,
@@ -289,3 +524,4 @@ if result is not None:
         step=1,
     )
     _show_debug_frame(result, frame_idx)
+    st.markdown("</div>", unsafe_allow_html=True)
