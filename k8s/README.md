@@ -27,3 +27,7 @@ kubectl rollout status deploy/scan-visualizer
 kubectl get pods -l app=scan-visualizer
 kubectl get ingress scan-visualizer
 ```
+
+Public hostname example:
+
+- `https://scan-visualizer.158.160.167.194.nip.io`

@@ -39,4 +39,4 @@ Image in `k8s/deployment.yaml`:
 
 and host in `k8s/ingress.yaml`:
 
-- `scan-visualizer.example.com`
+- `scan-visualizer.158.160.167.194.nip.io`

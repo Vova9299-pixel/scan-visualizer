@@ -3,10 +3,16 @@ kind: Ingress
 metadata:
   name: scan-visualizer
   annotations:
-    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - scan-visualizer.158.160.167.194.nip.io
+      secretName: scan-visualizer-tls
   rules:
-    - host: scan-visualizer.example.com
+    - host: scan-visualizer.158.160.167.194.nip.io
       http:
         paths:
           - path: /
