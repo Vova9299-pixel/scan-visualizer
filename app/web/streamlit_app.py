@@ -19,6 +19,106 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.core.processor import draw_debug_overlay, process_scan_folder
 
 
+APP_TITLE = "Intraocular 3D volume calculator"
+
+
+def _inject_styles() -> None:
+    st.markdown(
+        """
+        <style>
+            .stApp {
+                background: #f6f7fb;
+            }
+
+            .block-container {
+                max-width: 920px;
+                margin: 0 auto;
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+
+            h1, h2, h3 {
+                text-align: center;
+            }
+
+            .app-subtitle {
+                text-align: center;
+                color: #4a5568;
+                margin: 0 auto 1.5rem auto;
+                max-width: 680px;
+            }
+
+            .upload-card {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 18px;
+                padding: 1.25rem;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+                margin-bottom: 1rem;
+            }
+
+            .stButton > button {
+                width: 100%;
+                border-radius: 12px;
+                min-height: 3rem;
+                font-weight: 600;
+            }
+
+            [data-testid="stFileUploader"] {
+                width: 100%;
+            }
+
+            [data-testid="stMetric"] {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 16px;
+                padding: 0.75rem;
+                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+            }
+
+            @media (max-width: 768px) {
+                .block-container {
+                    padding-top: 1rem;
+                    padding-left: 0.9rem;
+                    padding-right: 0.9rem;
+                    padding-bottom: 1.25rem;
+                }
+
+                h1 {
+                    font-size: 1.7rem;
+                    line-height: 1.25;
+                }
+
+                h2 {
+                    font-size: 1.2rem;
+                }
+
+                .app-subtitle {
+                    font-size: 0.95rem;
+                    margin-bottom: 1rem;
+                }
+
+                [data-testid="stHorizontalBlock"] {
+                    gap: 0.75rem;
+                    flex-direction: column;
+                }
+
+                [data-testid="column"] {
+                    width: 100% !important;
+                    flex: 1 1 100% !important;
+                }
+
+                .upload-card {
+                    padding: 1rem;
+                    border-radius: 14px;
+                }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _save_uploaded_images(files: List[io.BytesIO], target_dir: Path) -> int:
     allowed = {".png", ".jpg", ".jpeg", ".bmp"}
     saved = 0
@@ -109,21 +209,30 @@ def _show_debug_frame(process_result, frame_index: int) -> None:
     st.image(rendered_rgb, use_container_width=True)
 
 
-st.set_page_config(page_title="Scan Visualizer", layout="wide")
-st.title("Визуализация снимков в браузере")
-st.write("Загрузите набор изображений (отдельными файлами или ZIP), затем запустите обработку.")
+st.set_page_config(page_title=APP_TITLE, layout="centered")
+_inject_styles()
 
-col_left, col_right = st.columns([1, 1])
+st.title(APP_TITLE)
+st.markdown(
+    """
+    <p class="app-subtitle">
+        Загрузите набор снимков отдельными файлами или ZIP-архивом,
+        затем запустите обработку и просмотрите 2D/3D результаты прямо в браузере.
+    </p>
+    """,
+    unsafe_allow_html=True,
+)
 
-with col_left:
+with st.container():
+    st.markdown('<div class="upload-card">', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
         "Изображения (PNG/JPG/BMP)",
         type=["png", "jpg", "jpeg", "bmp"],
         accept_multiple_files=True,
     )
     uploaded_zip = st.file_uploader("Или ZIP-архив с изображениями", type=["zip"])
-
-run_clicked = st.button("Запустить обработку", type="primary")
+    run_clicked = st.button("Запустить обработку", type="primary", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 if run_clicked:
     with tempfile.TemporaryDirectory(prefix="scan_web_") as tmp_dir:
