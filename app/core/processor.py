@@ -22,6 +22,7 @@ class ProcessingObjectResult:
     is_original: List[bool]
     viz_contours: List[np.ndarray]
     viz_angles: List[float]
+    viz_scan_numbers: List[int]
 
 
 @dataclass
@@ -229,6 +230,7 @@ def process_scan_folder(folder_path: str | Path) -> ProcessingResult:
             is_original=res["is_original"],
             viz_contours=res["viz_contours"],
             viz_angles=res["viz_angles"],
+            viz_scan_numbers=res["final_scan_numbers"],
         )
         for res in sorted(results, key=lambda x: x["id"])
     ]

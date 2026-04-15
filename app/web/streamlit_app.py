@@ -65,28 +65,40 @@ def _inject_styles() -> None:
                 position: relative;
                 overflow: hidden;
                 border-radius: 28px;
-                padding: 2rem 1.5rem 1.6rem 1.5rem;
+                padding: 1.35rem 1.5rem 1.55rem 1.5rem;
                 margin-bottom: 1.25rem;
-                background:
-                    linear-gradient(135deg, rgba(250, 251, 255, 0.96), rgba(255, 255, 255, 0.88)),
-                    radial-gradient(circle at 20% 10%, rgba(100, 127, 255, 0.16), transparent 26%);
+                border: 1px solid rgba(31, 59, 143, 0.12);
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+                box-shadow: 0 24px 54px rgba(31, 59, 143, 0.10);
             }
 
-            .hero-card::after {
+            .hero-card::before {
                 content: "";
                 position: absolute;
-                inset: auto -10% -35% auto;
-                width: 220px;
-                height: 220px;
-                border-radius: 50%;
-                background: radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 65%);
+                inset: 0 0 auto 0;
+                height: 6px;
+                background: linear-gradient(90deg, #213f9a 0%, #395fd8 55%, #6f8eff 100%);
                 pointer-events: none;
+            }
+
+            .hero-logo-wrap {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 0.4rem 0 0.9rem 0;
             }
 
             .hero-logo {
                 display: block;
-                width: min(820px, 100%);
-                margin: 0 auto 1.1rem auto;
+                width: min(760px, 100%);
+                margin: 0 auto;
+            }
+
+            .hero-divider {
+                width: min(780px, 100%);
+                height: 1px;
+                margin: 0.15rem auto 1rem auto;
+                background: linear-gradient(90deg, rgba(31, 59, 143, 0), rgba(31, 59, 143, 0.22), rgba(31, 59, 143, 0));
             }
 
             .eyebrow {
@@ -95,32 +107,40 @@ def _inject_styles() -> None:
                 gap: 0.45rem;
                 padding: 0.45rem 0.8rem;
                 border-radius: 999px;
-                background: rgba(99, 102, 241, 0.08);
-                color: #4453b3;
+                background: rgba(33, 63, 154, 0.08);
+                color: #2947a5;
                 font-size: 0.8rem;
                 font-weight: 700;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
-                margin-bottom: 1rem;
+                margin-bottom: 0.95rem;
             }
 
             .hero-title {
-                font-family: "Fraunces", serif;
-                font-size: 2.8rem;
-                line-height: 1.05;
-                color: #101828;
+                font-family: "Manrope", sans-serif;
+                font-size: 2.45rem;
+                line-height: 1.08;
+                font-weight: 800;
+                color: #1a2f73;
                 text-align: center;
-                max-width: 760px;
-                margin: 0 auto 0.9rem auto;
+                max-width: 820px;
+                margin: 0 auto 0.75rem auto;
             }
 
             .hero-subtitle {
                 text-align: center;
-                color: #526076;
-                margin: 0 auto 1.25rem auto;
-                max-width: 700px;
+                color: #4e5d74;
+                margin: 0 auto;
+                max-width: 760px;
                 font-size: 1rem;
-                line-height: 1.6;
+                line-height: 1.65;
+            }
+
+            .hero-note {
+                text-align: center;
+                color: #6d7890;
+                font-size: 0.92rem;
+                margin-top: 0.85rem;
             }
 
             .section-title {
@@ -210,18 +230,29 @@ def _inject_styles() -> None:
                 }
 
                 .hero-card {
-                    padding: 1.25rem 1rem 1rem 1rem;
+                    padding: 1rem 1rem 1.05rem 1rem;
                     border-radius: 22px;
                 }
 
+                .hero-logo-wrap {
+                    padding: 0.25rem 0 0.75rem 0;
+                }
+
+                .hero-divider {
+                    margin-bottom: 0.85rem;
+                }
+
                 .hero-title {
-                    font-size: 1.95rem;
-                    line-height: 1.12;
+                    font-size: 1.82rem;
+                    line-height: 1.14;
                 }
 
                 .hero-subtitle {
-                    font-size: 0.95rem;
-                    margin-bottom: 1rem;
+                    font-size: 0.94rem;
+                }
+
+                .hero-note {
+                    font-size: 0.86rem;
                 }
 
                 .section-title {
@@ -279,15 +310,32 @@ def _extract_uploaded_zip(uploaded_zip: io.BytesIO, target_dir: Path) -> int:
 
 def _build_3d_figure(process_result) -> go.Figure:
     fig = go.Figure()
-    palette = ["#7c8cff", "#35c4b5", "#ff8f6b", "#9f7aea", "#56b6f7", "#f6c453"]
+    scan_count = max(1, len(process_result.scan_numbers))
+    original_color_cache: dict[int, str] = {}
 
-    for obj_idx, obj in enumerate(process_result.objects):
-        line_color = palette[obj_idx % len(palette)]
-        for points_raw, angle in zip(obj.viz_contours, obj.viz_angles):
+    def color_for_scan(scan_number: int, is_original: bool) -> str:
+        if not is_original or scan_number == -1:
+            return "rgba(170, 178, 196, 0.35)"
+
+        if scan_number not in original_color_cache:
+            idx = process_result.scan_to_image_map.get(scan_number, 0)
+            hue = int(179 * idx / max(1, scan_count))
+            hsv = np.uint8([[[hue, 255, 255]]])
+            bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)[0][0]
+            original_color_cache[scan_number] = f"rgb({int(bgr[2])}, {int(bgr[1])}, {int(bgr[0])})"
+        return original_color_cache[scan_number]
+
+    for obj in process_result.objects:
+        for idx, (points_raw, angle) in enumerate(zip(obj.viz_contours, obj.viz_angles)):
             angle_rad = np.deg2rad(angle)
             x_3d = points_raw[:, 0] * np.cos(angle_rad)
             y_3d = points_raw[:, 1]
             z_3d = points_raw[:, 0] * np.sin(angle_rad)
+            scan_number = obj.viz_scan_numbers[idx] if idx < len(obj.viz_scan_numbers) else -1
+            is_original = obj.is_original[idx] if idx < len(obj.is_original) else False
+            line_color = color_for_scan(scan_number, is_original)
+            line_width = 3 if is_original else 1.6
+            opacity = 0.95 if is_original else 0.28
 
             fig.add_trace(
                 go.Scatter3d(
@@ -295,7 +343,8 @@ def _build_3d_figure(process_result) -> go.Figure:
                     y=y_3d,
                     z=z_3d,
                     mode="lines",
-                    line={"width": 3, "color": line_color},
+                    line={"width": line_width, "color": line_color},
+                    opacity=opacity,
                     name=f"Object {obj.object_id}",
                     showlegend=False,
                 )
@@ -367,15 +416,17 @@ def _render_hero() -> None:
     st.markdown(
         f"""
         <div class="hero-card">
-            {logo_markup}
+            <div class="hero-logo-wrap">{logo_markup}</div>
+            <div class="hero-divider"></div>
             <div style="text-align:center;">
-                <span class="eyebrow">Medical imaging analysis</span>
+                <span class="eyebrow">Клиническая визуализация</span>
             </div>
             <div class="hero-title">{APP_TITLE}</div>
             <div class="hero-subtitle">
                 Загрузите серию снимков, запустите расчёт и получите
                 2D/3D визуализацию, объём и плотность в одном веб-интерфейсе.
             </div>
+            <div class="hero-note">Инструмент для анализа внутриглазных снимков и оценки объёма на базе серии срезов.</div>
         </div>
         """,
         unsafe_allow_html=True,
