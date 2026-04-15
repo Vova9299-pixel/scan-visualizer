@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import sys
 import tempfile
@@ -20,6 +21,7 @@ from app.core.processor import draw_debug_overlay, process_scan_folder
 
 
 APP_TITLE = "Intraocular 3D volume calculator"
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "mntk-logo.png"
 
 
 def _inject_styles() -> None:
@@ -79,6 +81,12 @@ def _inject_styles() -> None:
                 border-radius: 50%;
                 background: radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 65%);
                 pointer-events: none;
+            }
+
+            .hero-logo {
+                display: block;
+                width: min(820px, 100%);
+                margin: 0 auto 1.1rem auto;
             }
 
             .eyebrow {
@@ -339,17 +347,34 @@ def _show_debug_frame(process_result, frame_index: int) -> None:
     st.image(rendered_rgb, use_container_width=True)
 
 
+def _logo_data_uri() -> str:
+    if not LOGO_PATH.exists():
+        return ""
+
+    encoded = base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def _render_hero() -> None:
+    logo_markup = ""
+    logo_uri = _logo_data_uri()
+    if logo_uri:
+        logo_markup = (
+            f'<img class="hero-logo" src="{logo_uri}" '
+            'alt="ФГАУ НМИЦ МНТК Микрохирургия глаза" />'
+        )
+
     st.markdown(
         f"""
         <div class="hero-card">
+            {logo_markup}
             <div style="text-align:center;">
                 <span class="eyebrow">Medical imaging analysis</span>
             </div>
             <div class="hero-title">{APP_TITLE}</div>
             <div class="hero-subtitle">
-                Загрузите серию снимков, запустите расчёт и получите аккуратную
-                2D/3D визуализацию, объём и плотность в одном чистом веб-интерфейсе.
+                Загрузите серию снимков, запустите расчёт и получите
+                2D/3D визуализацию, объём и плотность в одном веб-интерфейсе.
             </div>
         </div>
         """,
@@ -379,7 +404,7 @@ def _render_object_cards(process_result) -> None:
             st.markdown(
                 f"""
                 <div class="object-card">
-                    <div class="object-title">Object {obj.object_id}</div>
+                    <div class="object-title">Объект {obj.object_id}</div>
                     <div class="object-meta">
                         Объём: <strong>{obj.volume_mm3:.3f} мм3</strong><br/>
                         Объём: <strong>{obj.volume_ml:.4f} мл</strong><br/>

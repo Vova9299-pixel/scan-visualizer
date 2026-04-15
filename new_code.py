@@ -1807,7 +1807,10 @@ class ModelBuilder:
 
         if len(unique_angles) < 2: return 0.0
 
-        volume = float(np.trapz(y=unique_moments, x=unique_angles))
+        if hasattr(np, "trapezoid"):
+            volume = float(np.trapezoid(y=unique_moments, x=unique_angles))
+        else:
+            volume = float(np.trapz(y=unique_moments, x=unique_angles))
         return abs(volume)
 
 
