@@ -5,7 +5,7 @@ import sys
 import types
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -89,9 +89,8 @@ def _load_legacy_module():
     source_file = project_root / "new_code.py"
 
     module_name = "legacy_scan_processor"
-    existing = sys.modules.get(module_name)
-    if existing is not None:
-        return existing
+    if module_name in sys.modules:
+        del sys.modules[module_name]
 
     spec = importlib.util.spec_from_file_location(module_name, source_file)
     if spec is None or spec.loader is None:
@@ -143,8 +142,12 @@ def _build_debug_data(
     }
 
 
-def process_scan_folder(folder_path: str | Path) -> ProcessingResult:
+def process_scan_folder(folder_path: str | Path, settings_path: Optional[str | Path] = None) -> ProcessingResult:
     legacy = _load_legacy_module()
+    if settings_path is not None:
+        settings_file = Path(settings_path)
+        if settings_file.exists():
+            legacy.Settings.load(str(settings_file))
     legacy.reset_error_collector()
 
     folder = Path(folder_path)

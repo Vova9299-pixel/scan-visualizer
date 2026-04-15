@@ -299,12 +299,17 @@ def _extract_uploaded_zip(uploaded_zip: io.BytesIO, target_dir: Path) -> int:
     with zipfile.ZipFile(uploaded_zip) as archive:
         for member in archive.namelist():
             member_path = Path(member)
-            if member_path.suffix.lower() not in allowed or member_path.name.startswith("."):
+            if member_path.name.startswith("."):
+                continue
+            is_image = member_path.suffix.lower() in allowed
+            is_settings = member_path.name.lower() == "settings.json"
+            if not is_image and not is_settings:
                 continue
             data = archive.read(member)
             output_name = member_path.name
             (target_dir / output_name).write_bytes(data)
-            count += 1
+            if is_image:
+                count += 1
     return count
 
 
@@ -353,15 +358,21 @@ def _build_3d_figure(process_result) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        dragmode="orbit",
         scene={
-            "xaxis_title": "X",
-            "yaxis_title": "Y",
-            "zaxis_title": "Z",
+            "xaxis_title": "X (горизонталь)",
+            "yaxis_title": "Y (высота)",
+            "zaxis_title": "Z (глубина)",
             "aspectmode": "data",
             "bgcolor": "#0f172a",
             "xaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
             "yaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
             "zaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
+            "camera": {
+                "up": {"x": 0, "y": 1, "z": 0},
+                "center": {"x": 0, "y": 0, "z": 0},
+                "eye": {"x": 1.6, "y": 1.2, "z": 1.45},
+            },
         },
         margin={"l": 0, "r": 0, "t": 30, "b": 0},
     )
@@ -482,6 +493,11 @@ with st.container():
         accept_multiple_files=True,
     )
     uploaded_zip = st.file_uploader("Или ZIP-архив с изображениями", type=["zip"])
+    settings_file = st.file_uploader(
+        "Файл настроек settings.json (необязательно)",
+        type=["json"],
+        help="Загрузите тот же settings.json, который использовался в исходном приложении, чтобы метрики совпадали.",
+    )
     run_clicked = st.button("Запустить обработку", type="primary", use_container_width=True)
 
 if run_clicked:
@@ -493,6 +509,8 @@ if run_clicked:
             files_count += _extract_uploaded_zip(uploaded_zip, work_dir)
         if uploaded_files:
             files_count += _save_uploaded_images(uploaded_files, work_dir)
+        if settings_file is not None:
+            (work_dir / "settings.json").write_bytes(settings_file.getbuffer())
 
         if files_count == 0:
             st.error("Не найдено загруженных изображений для обработки.")
@@ -500,7 +518,11 @@ if run_clicked:
 
         with st.spinner("Обработка изображений..."):
             try:
-                result = process_scan_folder(work_dir)
+                settings_path = work_dir / "settings.json"
+                result = process_scan_folder(
+                    work_dir,
+                    settings_path=settings_path if settings_path.exists() else None,
+                )
             except Exception as exc:
                 st.exception(exc)
                 st.stop()
@@ -530,7 +552,20 @@ if result is not None:
         "3D-визуализация",
         "Интерактивная модель для визуальной оценки формы и структуры.",
     )
-    st.plotly_chart(_build_3d_figure(result), use_container_width=True)
+    st.caption("Оси фиксированы: X — горизонталь, Y — высота, Z — глубина.")
+    st.plotly_chart(
+        _build_3d_figure(result),
+        use_container_width=True,
+        config={
+            "displaylogo": False,
+            "modeBarButtonsToRemove": [
+                "pan3d",
+                "tableRotation",
+                "resetCameraLastSave3d",
+                "hoverClosest3d",
+            ],
+        },
+    )
 
     _render_section(
         "2D-отладочный просмотр",
