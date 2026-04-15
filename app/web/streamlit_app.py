@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import sys
 import tempfile
 import zipfile
@@ -17,11 +18,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.core.processor import draw_debug_overlay, process_scan_folder
+from app.core.processor import draw_debug_overlay, get_default_settings_values, process_scan_folder
 
 
 APP_TITLE = "Intraocular 3D volume calculator"
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "mntk-logo.png"
+ABOUT_DESKTOP_TITLE = "3D Scan Processor (Multi-Object)"
+ABOUT_DESKTOP_VERSION = "2.2"
 
 
 def _inject_styles() -> None:
@@ -313,10 +316,100 @@ def _extract_uploaded_zip(uploaded_zip: io.BytesIO, target_dir: Path) -> int:
     return count
 
 
+def _default_settings_text() -> str:
+    return json.dumps(get_default_settings_values(), ensure_ascii=False, indent=2)
+
+
+def _render_secondary_tools() -> None:
+    default_settings_text = _default_settings_text()
+    st.session_state.setdefault("settings_editor_text", "")
+    st.session_state.setdefault("settings_editor_upload_sig", "")
+
+    with st.popover("⋯", use_container_width=True):
+        settings_tab, about_tab = st.tabs(["Настройки", "О приложении"])
+
+        with settings_tab:
+            settings_import = st.file_uploader(
+                "Импортировать settings.json",
+                type=["json"],
+                help="Файл будет загружен в редактор ниже. Если редактор пустой, используются встроенные настройки или settings.json из ZIP.",
+                key="settings_json_popover",
+            )
+            if settings_import is not None:
+                uploaded_bytes = settings_import.getvalue()
+                upload_sig = f"{settings_import.name}:{len(uploaded_bytes)}"
+                if st.session_state["settings_editor_upload_sig"] != upload_sig:
+                    try:
+                        parsed = json.loads(uploaded_bytes.decode("utf-8"))
+                        st.session_state["settings_editor_text"] = json.dumps(parsed, ensure_ascii=False, indent=2)
+                        st.session_state["settings_editor_upload_sig"] = upload_sig
+                    except Exception:
+                        st.warning("Не удалось прочитать загруженный `settings.json`. Проверьте кодировку и формат JSON.")
+
+            settings_action_col_a, settings_action_col_b = st.columns(2)
+            with settings_action_col_a:
+                if st.button("Подставить шаблон", use_container_width=True, key="settings_fill_template"):
+                    st.session_state["settings_editor_text"] = default_settings_text
+            with settings_action_col_b:
+                if st.button("Очистить", use_container_width=True, key="settings_clear_editor"):
+                    st.session_state["settings_editor_text"] = ""
+                    st.session_state["settings_editor_upload_sig"] = ""
+
+            st.text_area(
+                "Редактор settings.json",
+                key="settings_editor_text",
+                height=320,
+                help="Если редактор не пустой, его содержимое будет сохранено как `settings.json` перед запуском обработки.",
+            )
+
+            current_settings_text = st.session_state.get("settings_editor_text", "").strip()
+            if current_settings_text:
+                try:
+                    json.loads(current_settings_text)
+                    st.caption("JSON валиден и будет применён при запуске обработки.")
+                except json.JSONDecodeError as exc:
+                    st.warning(f"JSON пока невалиден: {exc.msg} (строка {exc.lineno})")
+
+            download_col_a, download_col_b = st.columns(2)
+            with download_col_a:
+                st.download_button(
+                    "Скачать шаблон",
+                    data=default_settings_text,
+                    file_name="settings.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+            with download_col_b:
+                st.download_button(
+                    "Скачать текущее",
+                    data=current_settings_text or default_settings_text,
+                    file_name="settings-current.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+
+        with about_tab:
+            st.markdown(
+                f"""
+                **{ABOUT_DESKTOP_TITLE}**
+
+                Версия desktop: `{ABOUT_DESKTOP_VERSION}`
+
+                Веб-версия сохраняет исходную вычислительную логику из `new_code.py`:
+                распознавание срезов, построение 3D-модели, интерполяцию, расчёт объёма и плотности.
+
+                Здесь же доступны browser-friendly аналоги desktop-функций:
+                `3D`-ориентир, `2D`-отладка, diagnostics report и работа с `settings.json`.
+                """
+            )
+
+
 def _build_3d_figure(process_result) -> go.Figure:
     fig = go.Figure()
     scan_count = max(1, len(process_result.scan_numbers))
     original_color_cache: dict[int, str] = {}
+    all_points: list[np.ndarray] = []
+    axis_ranges = None
 
     def color_for_scan(scan_number: int, is_original: bool) -> str:
         if not is_original or scan_number == -1:
@@ -336,6 +429,7 @@ def _build_3d_figure(process_result) -> go.Figure:
             x_3d = points_raw[:, 0] * np.cos(angle_rad)
             y_3d = points_raw[:, 1]
             z_3d = points_raw[:, 0] * np.sin(angle_rad)
+            all_points.append(np.column_stack([x_3d, y_3d, z_3d]))
             scan_number = obj.viz_scan_numbers[idx] if idx < len(obj.viz_scan_numbers) else -1
             is_original = obj.is_original[idx] if idx < len(obj.is_original) else False
             line_color = color_for_scan(scan_number, is_original)
@@ -355,6 +449,58 @@ def _build_3d_figure(process_result) -> go.Figure:
                 )
             )
 
+    if all_points:
+        coords = np.concatenate(all_points, axis=0)
+        span = max(
+            float(np.ptp(coords[:, 0])),
+            float(np.ptp(coords[:, 1])),
+            float(np.ptp(coords[:, 2])),
+            1.0,
+        )
+        half_span = span * 0.62
+        center = np.array(
+            [
+                float(np.mean(coords[:, 0])),
+                float(np.mean(coords[:, 1])),
+                float(np.mean(coords[:, 2])),
+            ]
+        )
+        axis_ranges = {
+            "x": [float(center[0] - half_span), float(center[0] + half_span)],
+            "y": [float(center[1] - half_span), float(center[1] + half_span)],
+            "z": [float(center[2] - half_span), float(center[2] + half_span)],
+        }
+        axis_len = span * 0.18
+        triad_origin = np.array(
+            [
+                float(coords[:, 0].min() - span * 0.28),
+                float(coords[:, 1].min() - span * 0.28),
+                float(coords[:, 2].min() - span * 0.28),
+            ]
+        )
+
+        triad_specs = [
+            ("X", np.array([axis_len, 0.0, 0.0]), "#f97316"),
+            ("Y", np.array([0.0, axis_len, 0.0]), "#22c55e"),
+            ("Z", np.array([0.0, 0.0, axis_len]), "#3b82f6"),
+        ]
+        for label, delta, color in triad_specs:
+            end = triad_origin + delta
+            fig.add_trace(
+                go.Scatter3d(
+                    x=[triad_origin[0], end[0]],
+                    y=[triad_origin[1], end[1]],
+                    z=[triad_origin[2], end[2]],
+                    mode="lines+text",
+                    text=["", label],
+                    textposition="top center",
+                    line={"width": 7, "color": color},
+                    textfont={"size": 12, "color": color},
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -363,15 +509,31 @@ def _build_3d_figure(process_result) -> go.Figure:
             "xaxis_title": "X (горизонталь)",
             "yaxis_title": "Y (высота)",
             "zaxis_title": "Z (глубина)",
-            "aspectmode": "data",
+            "aspectmode": "manual",
+            "aspectratio": {"x": 1, "y": 1, "z": 1},
             "bgcolor": "#0f172a",
-            "xaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
-            "yaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
-            "zaxis": {"showbackground": False, "gridcolor": "rgba(255,255,255,0.12)", "color": "#dbe4ff"},
+            "xaxis": {
+                "showbackground": False,
+                "gridcolor": "rgba(255,255,255,0.12)",
+                "color": "#dbe4ff",
+                "range": axis_ranges["x"] if axis_ranges else None,
+            },
+            "yaxis": {
+                "showbackground": False,
+                "gridcolor": "rgba(255,255,255,0.12)",
+                "color": "#dbe4ff",
+                "range": axis_ranges["y"] if axis_ranges else None,
+            },
+            "zaxis": {
+                "showbackground": False,
+                "gridcolor": "rgba(255,255,255,0.12)",
+                "color": "#dbe4ff",
+                "range": axis_ranges["z"] if axis_ranges else None,
+            },
             "camera": {
                 "up": {"x": 0, "y": 1, "z": 0},
                 "center": {"x": 0, "y": 0, "z": 0},
-                "eye": {"x": 1.6, "y": 1.2, "z": 1.45},
+                "eye": {"x": 2.05, "y": 1.55, "z": 0.75},
             },
         },
         margin={"l": 0, "r": 0, "t": 30, "b": 0},
@@ -379,14 +541,38 @@ def _build_3d_figure(process_result) -> go.Figure:
     return fig
 
 
-def _show_debug_frame(process_result, frame_index: int) -> None:
+def _render_debug_details(process_result, frame_index: int, frame_position: int, total_frames: int) -> None:
+    debug_data = process_result.debug_data
+    angle = debug_data["angles"][frame_index]
+    scan_number = debug_data["scan_numbers"][frame_index]
+    contours = debug_data["contours"][frame_index]
+    is_original = scan_number != -1
+
+    if is_original:
+        title = f"Кадр {frame_position + 1}/{total_frames} (Оригинал)"
+        subtitle = f"Скан: {scan_number} | Угол: {angle:.2f}°"
+    else:
+        title = f"Кадр {frame_position + 1}/{total_frames} (Интерполированный)"
+        subtitle = f"Угол: {angle:.2f}°"
+
+    st.caption(f"{title} | {subtitle}")
+    details = [f"Найдено контуров на кадре: {len(contours)}"]
+    if contours:
+        for idx, contour in enumerate(contours, start=1):
+            if contour is None or len(contour) == 0:
+                continue
+            area_px = cv2.contourArea(contour.astype(np.float32))
+            area_mm2 = area_px / max(process_result.scale_x * process_result.scale_y, 1e-9)
+            details.append(f"Контур {idx}: {area_mm2:.3f} мм2")
+    st.markdown("\n".join(f"- {item}" for item in details))
+
+
+def _build_debug_figure(process_result, frame_index: int) -> go.Figure:
     debug_data = process_result.debug_data
     if not debug_data["angles"]:
-        st.info("Нет данных для 2D-отладки.")
-        return
+        return go.Figure()
 
     frame_index = max(0, min(frame_index, len(debug_data["angles"]) - 1))
-    angle = debug_data["angles"][frame_index]
     scan_number = debug_data["scan_numbers"][frame_index]
     contours = debug_data["contours"][frame_index]
     colors = debug_data["colors"][frame_index]
@@ -394,17 +580,37 @@ def _show_debug_frame(process_result, frame_index: int) -> None:
     if scan_number != -1 and scan_number in process_result.scan_to_image_map:
         image_idx = process_result.scan_to_image_map[scan_number]
         base_image = process_result.images[image_idx]
-        scan_label = f"Скан #{scan_number}"
     else:
         shape = process_result.images[0].shape if process_result.images else (512, 512, 3)
         base_image = np.zeros(shape, dtype=np.uint8)
-        scan_label = "Интерполированный кадр"
 
     rendered = draw_debug_overlay(base_image, contours, colors)
     rendered_rgb = cv2.cvtColor(rendered, cv2.COLOR_BGR2RGB)
 
-    st.caption(f"{scan_label}, угол: {angle:.2f}°, контуров: {len(contours)}")
-    st.image(rendered_rgb, use_container_width=True)
+    fig = go.Figure(go.Image(z=rendered_rgb))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        dragmode="pan",
+        margin={"l": 0, "r": 0, "t": 0, "b": 0},
+        height=min(820, max(420, int(rendered_rgb.shape[0] * 1.05))),
+        uirevision=f"debug-{frame_index}",
+    )
+    fig.update_xaxes(visible=False, showgrid=False, zeroline=False)
+    fig.update_yaxes(visible=False, showgrid=False, zeroline=False, scaleanchor="x", autorange="reversed")
+    return fig
+
+
+def _show_debug_frame(process_result, frame_index: int) -> None:
+    st.plotly_chart(
+        _build_debug_figure(process_result, frame_index),
+        use_container_width=True,
+        config={
+            "displaylogo": False,
+            "scrollZoom": True,
+            "modeBarButtonsToRemove": ["select2d", "lasso2d"],
+        },
+    )
 
 
 def _logo_data_uri() -> str:
@@ -483,21 +689,20 @@ _inject_styles()
 _render_hero()
 
 with st.container():
-    _render_section(
-        "Исходные данные",
-        "Загрузите снимки в поддерживаемом формате и запустите расчёт одним нажатием.",
-    )
+    section_col, actions_col = st.columns([0.9, 0.1])
+    with section_col:
+        _render_section(
+            "Исходные данные",
+            "Загрузите снимки в поддерживаемом формате и запустите расчёт одним нажатием.",
+        )
+    with actions_col:
+        _render_secondary_tools()
     uploaded_files = st.file_uploader(
         "Изображения (PNG/JPG/BMP)",
         type=["png", "jpg", "jpeg", "bmp"],
         accept_multiple_files=True,
     )
     uploaded_zip = st.file_uploader("Или ZIP-архив с изображениями", type=["zip"])
-    settings_file = st.file_uploader(
-        "Файл настроек settings.json (необязательно)",
-        type=["json"],
-        help="Загрузите тот же settings.json, который использовался в исходном приложении, чтобы метрики совпадали.",
-    )
     run_clicked = st.button("Запустить обработку", type="primary", use_container_width=True)
 
 if run_clicked:
@@ -509,8 +714,18 @@ if run_clicked:
             files_count += _extract_uploaded_zip(uploaded_zip, work_dir)
         if uploaded_files:
             files_count += _save_uploaded_images(uploaded_files, work_dir)
-        if settings_file is not None:
-            (work_dir / "settings.json").write_bytes(settings_file.getbuffer())
+
+        settings_editor_text = st.session_state.get("settings_editor_text", "").strip()
+        if settings_editor_text:
+            try:
+                settings_payload = json.loads(settings_editor_text)
+            except json.JSONDecodeError as exc:
+                st.error(f"`settings.json` невалиден: {exc.msg} (строка {exc.lineno}).")
+                st.stop()
+            (work_dir / "settings.json").write_text(
+                json.dumps(settings_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
 
         if files_count == 0:
             st.error("Не найдено загруженных изображений для обработки.")
@@ -537,10 +752,17 @@ if result is not None:
         "Итоговые метрики",
         "Ключевые показатели по текущему набору снимков.",
     )
-    metric_a, metric_b, metric_c = st.columns(3)
+    metric_a, metric_b, metric_c, metric_d = st.columns(4)
     metric_a.metric("Суммарный объем (мм3)", f"{result.total_volume_mm3:.3f}")
     metric_b.metric("Суммарный объем (мл)", f"{result.total_volume_ml:.4f}")
     metric_c.metric("Средняя плотность (%)", f"{result.average_density_percent:.2f}")
+    metric_d.metric("Найдено объектов", str(len(result.objects)))
+    if result.processing_summary:
+        st.caption(result.processing_summary)
+
+    if result.processing_report:
+        with st.expander("Предупреждения и диагностический отчёт"):
+            st.code(result.processing_report, language="text")
 
     _render_section(
         "Найденные объекты",
@@ -552,7 +774,7 @@ if result is not None:
         "3D-визуализация",
         "Интерактивная модель для визуальной оценки формы и структуры.",
     )
-    st.caption("Оси фиксированы: X — горизонталь, Y — высота, Z — глубина.")
+    st.caption("Оси фиксированы: X — горизонталь, Y — высота, Z — глубина. В сцене добавлен цветной XYZ-ориентир.")
     st.plotly_chart(
         _build_3d_figure(result),
         use_container_width=True,
@@ -569,17 +791,44 @@ if result is not None:
 
     _render_section(
         "2D-отладочный просмотр",
-        "Покадровый просмотр контуров и промежуточной визуализации.",
+        "Покадровый просмотр контуров и промежуточной визуализации. Поддерживаются zoom и pan.",
     )
     frame_count = len(result.debug_data["angles"])
-    if frame_count > 1:
-        frame_idx = st.slider(
-            "Кадр",
-            min_value=0,
-            max_value=frame_count - 1,
-            value=0,
-            step=1,
-        )
+    show_interpolated = st.checkbox("Показывать интерполированные", value=True)
+    available_frame_indices = (
+        list(range(frame_count))
+        if show_interpolated
+        else [idx for idx, scan_number in enumerate(result.debug_data["scan_numbers"]) if scan_number != -1]
+    )
+
+    if not available_frame_indices:
+        st.info("Нет исходных кадров для отображения без интерполированных срезов.")
     else:
-        frame_idx = 0
-    _show_debug_frame(result, frame_idx)
+        frame_state_key = "debug_frame_position"
+        max_frame_position = len(available_frame_indices) - 1
+        current_frame_position = min(
+            st.session_state.get(frame_state_key, 0),
+            max_frame_position,
+        )
+
+        if len(available_frame_indices) > 1:
+            nav_prev_col, nav_next_col = st.columns(2)
+            with nav_prev_col:
+                if st.button("← Предыдущее", use_container_width=True, key="debug_prev"):
+                    current_frame_position = (current_frame_position - 1) % len(available_frame_indices)
+            with nav_next_col:
+                if st.button("Следующее →", use_container_width=True, key="debug_next"):
+                    current_frame_position = (current_frame_position + 1) % len(available_frame_indices)
+
+            current_frame_position = st.slider(
+                "Кадр",
+                min_value=0,
+                max_value=max_frame_position,
+                value=current_frame_position,
+                step=1,
+            )
+
+        st.session_state[frame_state_key] = current_frame_position
+        frame_idx = available_frame_indices[current_frame_position]
+        _render_debug_details(result, frame_idx, current_frame_position, len(available_frame_indices))
+        _show_debug_frame(result, frame_idx)

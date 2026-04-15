@@ -5,7 +5,7 @@ import sys
 import types
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -35,6 +35,10 @@ class ProcessingResult:
     images: List[np.ndarray]
     scan_numbers: List[int]
     scan_to_image_map: Dict[int, int]
+    scale_x: float
+    scale_y: float
+    processing_summary: str
+    processing_report: str
 
 
 def _make_dummy_qt_class(name: str):
@@ -100,6 +104,19 @@ def _load_legacy_module():
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def get_default_settings_values() -> Dict[str, Any]:
+    legacy = _load_legacy_module()
+    values: Dict[str, Any] = {}
+    for key, value in legacy.Settings.__dict__.items():
+        if key.startswith("__") or callable(value):
+            continue
+        if isinstance(value, tuple):
+            values[key] = list(value)
+        elif isinstance(value, (int, float, bool, str, list)):
+            values[key] = value
+    return values
 
 
 def _build_debug_data(
@@ -174,6 +191,7 @@ def process_scan_folder(folder_path: str | Path, settings_path: Optional[str | P
         image_height,
         n_resample_points=legacy.Settings.RESAMPLE_N_POINTS_DEFAULT,
     )
+    legacy.get_error_collector().set_file_counts(len(images), len(images))
 
     all_slices_contours = []
     all_densities = []
@@ -247,6 +265,10 @@ def process_scan_folder(folder_path: str | Path, settings_path: Optional[str | P
         images=images,
         scan_numbers=list(scan_numbers),
         scan_to_image_map=scan_to_image_map,
+        scale_x=float(builder.scale_x),
+        scale_y=float(builder.scale_y),
+        processing_summary=str(legacy.get_error_collector().get_summary()),
+        processing_report=str(legacy.get_error_collector().get_grouped_report()),
     )
 
 
